@@ -312,10 +312,15 @@ function createRubyLayer(parentLayer, rubyText, rubySizePercent, inheritStyle, c
         // 新しいテキストレイヤーを作成
         var rubyLayer = doc.artLayers.add();
         rubyLayer.kind = LayerKind.TEXT;
-        rubyLayer.name = parentLayer.name + "_ルビ";
+        // ルビのレイヤー名をルビ文字列と同一にする
+        rubyLayer.name = rubyText;
 
         var rubyTextItem = rubyLayer.textItem;
         rubyTextItem.contents = rubyText;
+        // ルビを縦書きで生成
+        try {
+            rubyTextItem.orientation = TextOrientation.VERTICAL;
+        } catch (e) {}
 
         // スタイルを設定
         if (inheritStyle) {
