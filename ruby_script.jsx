@@ -440,11 +440,31 @@ function getLayerBounds(layer) {
     }
 }
 
+// レイヤー効果があるか判定
+function hasLayerEffects(layer) {
+    try {
+        var idget = charIDToTypeID("getd");
+        var desc = new ActionDescriptor();
+        var idnull = charIDToTypeID("null");
+        var ref = new ActionReference();
+        var idLefx = charIDToTypeID("Lefx");
+        var idLyr = charIDToTypeID("Lyr ");
+        ref.putProperty(charIDToTypeID("Prpr"), idLefx);
+        ref.putName(idLyr, layer.name);
+        desc.putReference(idnull, ref);
+
+        executeAction(idget, desc, DialogModes.NO);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 // レイヤー効果をグループに適用
 function applyEffectsToGroup(parentLayer, rubyLayer) {
     try {
         var doc = app.activeDocument;
-        
+
         // まず親文字のレイヤー効果を取得
         var idget = charIDToTypeID("getd");
         var desc = new ActionDescriptor();
@@ -470,24 +490,32 @@ function applyEffectsToGroup(parentLayer, rubyLayer) {
         // 親レイヤーが所属しているフォルダを取得
         var parentFolder = parentLayer.parent;
         var group;
-        
-        // 親がLayerSetの場合はその中に、そうでなければドキュメント直下に作成
-        if (parentFolder.typename === "LayerSet") {
-            group = parentFolder.layerSets.add();
+
+        var useExistingGroup = parentFolder.typename === "LayerSet" && hasLayerEffects(parentFolder);
+
+        // 既存のグループに効果がある場合はその中にルビを追加
+        if (useExistingGroup) {
+            group = parentFolder;
+            rubyLayer.move(parentLayer, ElementPlacement.PLACEBEFORE);
         } else {
-            group = doc.layerSets.add();
+            // 新たにグループを作成
+            if (parentFolder.typename === "LayerSet") {
+                group = parentFolder.layerSets.add();
+            } else {
+                group = doc.layerSets.add();
+            }
+
+            group.name = "グループ";
+
+            // ルビレイヤーをグループに移動
+            rubyLayer.move(group, ElementPlacement.INSIDE);
+
+            // 親文字レイヤーをグループに移動
+            parentLayer.move(group, ElementPlacement.INSIDE);
         }
         
-        group.name = "グループ";
-        
-        // ルビレイヤーをグループに移動
-        rubyLayer.move(group, ElementPlacement.INSIDE);
-        
-        // 親文字レイヤーをグループに移動
-        parentLayer.move(group, ElementPlacement.INSIDE);
-        
-        // レイヤー効果がある場合
-        if (hasEffects && effectsDesc) {
+        // レイヤー効果がある場合（既存グループを利用する場合は適用しない）
+        if (!useExistingGroup && hasEffects && effectsDesc) {
             // グループに効果を適用
             var idsetd = charIDToTypeID("setd");
             var desc2 = new ActionDescriptor();
